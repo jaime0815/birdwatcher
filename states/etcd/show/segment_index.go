@@ -6,14 +6,15 @@ import (
 	"path"
 	"time"
 
+	"github.com/spf13/cobra"
+	clientv3 "go.etcd.io/etcd/client/v3"
+
 	"github.com/milvus-io/birdwatcher/proto/v2.0/commonpb"
 	"github.com/milvus-io/birdwatcher/proto/v2.0/datapb"
 	"github.com/milvus-io/birdwatcher/proto/v2.0/etcdpb"
 	"github.com/milvus-io/birdwatcher/proto/v2.0/indexpb"
 	indexpbv2 "github.com/milvus-io/birdwatcher/proto/v2.2/indexpb"
 	"github.com/milvus-io/birdwatcher/states/etcd/common"
-	"github.com/spf13/cobra"
-	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 // SegmentIndexCommand returns show segment-index command.
@@ -29,6 +30,12 @@ func SegmentIndexCommand(cli clientv3.KV, basePath string) *cobra.Command {
 				return
 			}
 			segmentID, err := cmd.Flags().GetInt64("segment")
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+
+			detail, err := cmd.Flags().GetBool("detail")
 			if err != nil {
 				fmt.Println(err.Error())
 				return
@@ -112,11 +119,19 @@ func SegmentIndexCommand(cli clientv3.KV, basePath string) *cobra.Command {
 						continue
 					}
 					for _, segIdx := range segIdxv2 {
-						fmt.Printf("\n\tIndexV2 build ID: %d, states %s", segIdx.GetBuildID(), segIdx.GetState().String())
+						fmt.Printf("\n\tIndexV2 build ID: %d, indexID:%d, states %s", segIdx.GetBuildID(), segIdx.GetIndexID(), segIdx.GetState().String())
 						idx, ok := idIdx[segIdx.GetIndexID()]
 						if ok {
 							fmt.Printf("\t Index Type:%v on Field ID: %d", common.GetKVPair(idx.GetIndexInfo().GetIndexParams(), "index_type"), idx.GetIndexInfo().GetFieldID())
 						}
+
+						if detail {
+							fmt.Printf("\n Index File path:")
+							for _, p := range segIdx.IndexFileKeys {
+								fmt.Printf("\n%s", p)
+							}
+						}
+
 					}
 					fmt.Println()
 					continue
@@ -130,6 +145,12 @@ func SegmentIndexCommand(cli clientv3.KV, basePath string) *cobra.Command {
 					}
 					fmt.Printf("\n\tIndex build ID: %d, state: %s", info.IndexBuildID, info.State.String())
 					fmt.Printf("\t Index Type:%v on Field ID: %d", common.GetKVPair(info.GetReq().GetIndexParams(), "index_type"), segIdx.GetFieldID())
+					if detail {
+						fmt.Printf("\n Index File path:")
+						for _, p := range info.IndexFilePaths {
+							fmt.Printf("\n%s", p)
+						}
+					}
 				}
 				fmt.Println()
 			}
@@ -139,6 +160,7 @@ func SegmentIndexCommand(cli clientv3.KV, basePath string) *cobra.Command {
 
 	cmd.Flags().Int64("collection", 0, "collection id to filter with")
 	cmd.Flags().Int64("segment", 0, "segment id to filter with")
+	cmd.Flags().Bool("detail", false, "show detail information")
 	return cmd
 }
 
