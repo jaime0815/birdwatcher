@@ -216,20 +216,31 @@ type Binlog struct {
 	TimestampTo   uint64
 	LogPath       string
 	LogSize       int64
+	LogID         int64
 }
 
-func newBinlog[T interface {
-	GetEntriesNum() int64
-	GetTimestampFrom() uint64
-	GetTimestampTo() uint64
-	GetLogPath() string
-	GetLogSize() int64
-}](binlog T) *Binlog {
-	return &Binlog{
-		EntriesNum:    binlog.GetEntriesNum(),
-		TimestampFrom: binlog.GetTimestampFrom(),
-		TimestampTo:   binlog.GetTimestampTo(),
-		LogPath:       binlog.GetLogPath(),
-		LogSize:       binlog.GetLogSize(),
+func newBinlog(binlog any) *Binlog {
+	if binlogv1, ok := binlog.(*datapb.Binlog); ok {
+		return &Binlog{
+			EntriesNum:    binlogv1.GetEntriesNum(),
+			TimestampFrom: binlogv1.GetTimestampFrom(),
+			TimestampTo:   binlogv1.GetTimestampTo(),
+			LogPath:       binlogv1.GetLogPath(),
+			LogSize:       binlogv1.GetLogSize(),
+		}
 	}
+
+	if binlogv2, ok := binlog.(*datapbv2.Binlog); ok {
+		return &Binlog{
+			EntriesNum:    binlogv2.GetEntriesNum(),
+			TimestampFrom: binlogv2.GetTimestampFrom(),
+			TimestampTo:   binlogv2.GetTimestampTo(),
+			LogPath:       binlogv2.GetLogPath(),
+			LogSize:       binlogv2.GetLogSize(),
+			LogID:         binlogv2.GetLogID(),
+		}
+	}
+
+	panic("unkown binlog type")
+
 }

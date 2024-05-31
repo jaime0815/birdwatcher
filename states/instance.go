@@ -94,6 +94,8 @@ func (s *InstanceState) SetupCommands() {
 		// probe
 		GetProbeCmd(cli, basePath),
 
+		FixStatsLogMissing(cli, basePath),
+
 		// set current-version
 		SetCurrentVersionCommand(),
 

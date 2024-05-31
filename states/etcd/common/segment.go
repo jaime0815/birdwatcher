@@ -21,6 +21,19 @@ const (
 	SegmentStatsMetaPrefix = "datacoord-meta/statslog"
 )
 
+func ForeachSegmentsV2(ctx context.Context, cli clientv3.KV, basePath string, iterate func(datapbv2.SegmentInfo)) error {
+	prefix := path.Join(basePath, SegmentMetaPrefix) + "/"
+	segments, _, err := ListProtoObjects[datapbv2.SegmentInfo](ctx, cli, prefix)
+	if err != nil {
+		return err
+	}
+
+	lo.ForEach(segments, func(segment datapbv2.SegmentInfo, i int) {
+		iterate(segment)
+	})
+	return nil
+}
+
 // ListSegmentsVersion list segment info as specified version.
 func ListSegmentsVersion(ctx context.Context, cli clientv3.KV, basePath string, version string, filters ...func(*models.Segment) bool) ([]*models.Segment, error) {
 	prefix := path.Join(basePath, SegmentMetaPrefix) + "/"
